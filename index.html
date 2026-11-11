@@ -2,314 +2,668 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Dashboard</title>
 <style>
-@page {
-  size: A4 landscape;
-  margin: 10mm;
-  background-color: #ffffff;
+:root{
+  --bg:#0f1714; --panel:#17221d; --line:#26362e;
+  --ink:#ece6d6; --mute:#8a9a91; --accent:#f0b43c;
+  color-scheme:dark;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: #000000;
-  background: #ffffff;
-  height: 100%;
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  overflow:hidden;-webkit-tap-highlight-color:transparent}
+main{display:grid;height:100%;gap:2vmin;padding:3vmin;
+  grid-template-columns:1fr 1fr;
+  grid-template-areas:"now todo" "news todo";
+  grid-template-rows:auto minmax(0,1fr)}
+@media (orientation:portrait){
+  main{grid-template-columns:1fr;grid-template-areas:"now" "news" "todo";
+    grid-template-rows:auto minmax(0,1fr) minmax(0,1fr)}
 }
-.header {
-  display: table;
-  width: 100%;
-  border-bottom: 3px solid #000;
-  padding-bottom: 12px;
-  margin-bottom: 20px;
-}
-.header-left {
-  display: table-cell;
-  vertical-align: bottom;
-}
-.header-right {
-  display: table-cell;
-  text-align: right;
-  vertical-align: bottom;
-}
-.city {
-  font-size: 28pt;
-  font-weight: bold;
-  letter-spacing: -0.5px;
-}
-.date-str {
-  font-size: 14pt;
-  color: #333;
-}
-.time-large {
-  font-size: 42pt;
-  font-weight: bold;
-  font-family: "Georgia", serif;
+section{background:var(--panel);border-radius:14px;padding:2.5vmin 3vmin;min-height:0}
+h2{font-size:clamp(13px,2.6vmin,18px);font-weight:600;color:var(--mute);margin-bottom:1.2vmin}
+
+/* clock + weather */
+#now{grid-area:now;display:flex;flex-direction:column;justify-content:space-between}
+#clock{font-family:"Iowan Old Style",Georgia,"Times New Roman",serif;
+  font-size:clamp(64px,20vmin,180px);line-height:1;letter-spacing:-.02em;color:var(--ink);cursor:pointer}
+#date{font-size:clamp(16px,3.4vmin,26px);color:var(--accent);margin-top:1vmin;cursor:pointer;display:inline-block}
+#date:hover{text-decoration:underline}
+#wx{margin-top:2vmin;cursor:pointer}
+#temp-row{display:flex;align-items:center;gap:1.5vmin}
+#wx-icon{font-size:clamp(36px,9vmin,70px);line-height:1}
+#temp{font-family:"Iowan Old Style",Georgia,serif;font-size:clamp(36px,10vmin,84px);line-height:1}
+#cond{font-size:clamp(14px,3vmin,22px);color:var(--mute);margin-top:.6vmin}
+#days{display:flex;gap:1.5vmin;margin-top:2vmin}
+.day{flex:1;border-top:1px solid var(--line);padding-top:1vmin;font-size:clamp(12px,2.5vmin,18px);text-align:center}
+.day .d-icon{font-size:clamp(14px,3vmin,22px);display:block;margin:0.2vmin 0}
+.day b{display:block;font-weight:600}
+.day span{color:var(--mute)}
+#wxerr{color:var(--mute);font-size:clamp(13px,2.8vmin,20px)}
+
+/* compact screens */
+@media (orientation:landscape){#clock{font-size:clamp(52px,16vmin,150px)}}
+@media (max-height:520px) and (orientation:landscape), (max-height:760px) and (orientation:portrait){
+  #days{display:none}
 }
 
-.grid {
-  display: table;
-  width: 100%;
-  table-layout: fixed;
-}
-.row {
-  display: table-row;
-}
-.cell {
-  display: table-cell;
-  vertical-align: top;
-  padding: 10px;
-}
-.w-50 { width: 50%; }
+/* news */
+#news{grid-area:news;overflow:hidden;cursor:pointer}
+#news h2{display:flex;justify-content:space-between;cursor:pointer}
+.n{cursor:pointer;padding:1vmin 0;border-bottom:1px solid var(--line)}
+.n:last-child{border-bottom:0}
+.m{font-size:clamp(11px,2.3vmin,15px);color:var(--mute)}
+.l{color:var(--accent);font-weight:600;margin-right:1.2vmin}
+.h{font-size:clamp(13px,2.8vmin,19px);line-height:1.25;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
-.card {
-  border: 2px solid #000;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 15px;
-}
-.card-title {
-  font-size: 14pt;
-  font-weight: bold;
-  text-transform: uppercase;
-  border-bottom: 1px solid #000;
-  padding-bottom: 6px;
-  margin-bottom: 12px;
-}
+/* MODALS & OVERLAYS */
+.modal{position:fixed;top:0;left:0;right:0;bottom:0;z-index:100;background:rgba(15,23,20,.95);
+  display:flex;align-items:center;justify-content:center;padding:3vmin;overflow:auto}
+.modal[hidden]{display:none}
+.mbox{max-width:850px;width:94%;max-height:88vh;overflow-y:auto;background:var(--panel);
+  border:1px solid var(--line);border-radius:16px;padding:3vmin 4vmin}
 
-/* Weather Table */
-.wx-current {
-  display: table;
-  width: 100%;
-  margin-bottom: 15px;
-}
-.wx-temp {
-  display: table-cell;
-  font-size: 38pt;
-  font-weight: bold;
-  font-family: "Georgia", serif;
-  width: 40%;
-}
-.wx-desc {
-  display: table-cell;
-  vertical-align: middle;
-  font-size: 15pt;
-  font-weight: bold;
-}
-.wx-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 11pt;
-}
-.wx-table th, .wx-table td {
-  border-bottom: 1px solid #ccc;
-  padding: 6px 4px;
-  text-align: left;
-}
-.wx-table th {
-  border-bottom: 2px solid #000;
-}
+/* News Detail Modal */
+#dtitle{font-family:"Iowan Old Style",Georgia,serif;font-weight:400;font-size:clamp(20px,4.8vmin,38px);
+  line-height:1.25;margin:1.5vmin 0 2vmin}
+#dsum{font-size:clamp(15px,3.2vmin,24px);line-height:1.45;color:var(--ink)}
 
-/* Calendar Table */
-.cal-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: center;
-  font-size: 12pt;
-}
-.cal-table th {
-  padding: 6px;
-  font-weight: bold;
-  border-bottom: 1px solid #000;
-}
-.cal-table td {
-  padding: 8px 4px;
-  height: 35px;
-}
-.today-circle {
-  border: 2px solid #000;
-  border-radius: 50%;
-  padding: 4px 8px;
-  font-weight: bold;
-}
+/* Weather Detailed Modal */
+#wx-pop-title{font-size:clamp(20px,3.8vmin,30px);color:var(--accent);margin-bottom:2vmin}
+.wx-row{display:flex;align-items:center;justify-content:space-between;padding:1.4vmin 0;
+  border-bottom:1px solid var(--line);font-size:clamp(14px,2.8vmin,19px)}
+.wx-row:last-child{border-bottom:none}
+.wx-pop-date{width:22%;font-weight:600}
+.wx-pop-icon{width:10%;text-align:center;font-size:1.3em}
+.wx-pop-cond{width:33%;color:var(--mute)}
+.wx-pop-precip{width:18%;color:#64b5f6;font-size:0.9em}
+.wx-pop-temp{width:17%;text-align:right}
 
-/* Checklist / Todo */
-.todo-item {
-  font-size: 12pt;
-  padding: 6px 0;
-  border-bottom: 1px dashed #999;
-}
-.checkbox {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 1.5px solid #000;
-  margin-right: 8px;
-}
+/* Scrollable Calendar Modal */
+.cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:3vmin}
+.cal-nav button{background:var(--line);color:var(--ink);border:none;border-radius:8px;
+  padding:1vmin 2.5vmin;cursor:pointer;font-size:1.1rem}
+#pop-cal-container{display:flex;flex-direction:column;gap:3vmin}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:.4vmin;text-align:center;
+  font-size:clamp(11px,2.4vmin,17px)}
+.wd{color:var(--mute)}
+.c{padding:.5vmin 0;border-radius:50%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;
+  max-height:5.2vmin;margin:0 auto;width:100%;max-width:5.2vmin}
+.c.today{background:var(--accent);color:#0f1714;font-weight:700}
+.c.we{color:var(--mute)}
 
-/* News */
-.news-item {
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #ddd;
-}
-.news-tag {
-  font-size: 9pt;
-  font-weight: bold;
-  text-transform: uppercase;
-  border: 1px solid #000;
-  padding: 1px 4px;
-  margin-right: 6px;
-}
-.news-title {
-  font-size: 11pt;
-  font-weight: bold;
-}
-.news-sum {
-  font-size: 9.5pt;
-  color: #444;
-  margin-top: 2px;
-}
+/* to-do */
+#todo{grid-area:todo;display:flex;flex-direction:column;cursor:pointer}
+.add{display:flex;gap:1.5vmin;margin-bottom:1.5vmin}
+input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);color:var(--ink);
+  border-radius:10px;padding:1.4vmin 1.8vmin;font-size:clamp(14px,3vmin,20px)}
+input:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button{background:var(--accent);color:#0f1714;border:0;border-radius:10px;
+  padding:0 2.4vmin;font-size:clamp(14px,3vmin,20px);font-weight:600;cursor:pointer}
+ul{list-style:none;overflow-y:auto;flex:1;min-height:0}
+li{display:flex;align-items:center;gap:1.5vmin;padding:1.3vmin 0;border-bottom:1px solid var(--line);
+  font-size:clamp(14px,3vmin,21px)}
+li .t{flex:1;cursor:pointer;word-break:break-word}
+li.done .t{color:var(--mute);text-decoration:line-through}
+li .x{background:none;color:var(--mute);padding:0 1vmin;font-size:clamp(18px,4vmin,28px);font-weight:400;cursor:pointer}
+.empty{color:var(--mute);font-size:clamp(13px,2.8vmin,19px);padding-top:1vmin}
 </style>
 </head>
 <body>
+<main>
+  <section id="now">
+    <div>
+      <div id="clock">--:--</div>
+      <div id="date" title="Tap to open full calendar">--</div>
+    </div>
+    <div id="wx">
+      <div id="wxerr">Loading weather…</div>
+    </div>
+  </section>
 
-<div class="header">
-  <div class="header-left">
-    <div class="city">KHUJAND DASHBOARD</div>
-    <div class="date-str">Wednesday, 11 November 2026</div>
-  </div>
-  <div class="header-right">
-    <div class="time-large">17:34</div>
+  <section id="news">
+    <h2 id="newshead"><span>News</span><span id="pg"></span></h2>
+    <div id="newsbody"><div class="m">Loading news…</div></div>
+  </section>
+
+  <section id="todo">
+    <h2 id="todo-head">To-do <span style="font-size:0.8em; font-weight:normal; color:var(--accent);">⤢ Tap to expand</span></h2>
+    <div class="add" onclick="event.stopPropagation()">
+      <input id="in" type="text" placeholder="Add a task" maxlength="80" autocomplete="off">
+      <button id="add" type="button">Add</button>
+    </div>
+    <ul id="list" onclick="event.stopPropagation()"></ul>
+  </section>
+</main>
+
+<!-- NEWS DETAIL MODAL -->
+<div id="detail" class="modal" hidden>
+  <div class="mbox" onclick="event.stopPropagation()">
+    <div class="m" id="dmeta"></div>
+    <h3 id="dtitle"></h3>
+    <p id="dsum"></p>
+    <div class="m" style="margin-top:3vmin;">Tap outside to close</div>
   </div>
 </div>
 
-<div class="grid">
-  <div class="row">
-    <!-- LEFT COLUMN -->
-    <div class="cell w-50" style="padding-right: 10px;">
-      
-      <!-- WEATHER CARD -->
-      <div class="card">
-        <div class="card-title">Weather Forecast</div>
-        <div class="wx-current">
-          <div class="wx-temp">14°C</div>
-          <div class="wx-desc">🌤️ Clear / Mostly Clear<br><span style="font-size:10pt; font-weight:normal; color:#555;">Humidity: 45% • Wind: 8 km/h</span></div>
-        </div>
-        <table class="wx-table">
-          <thead>
-            <tr>
-              <th>Day</th>
-              <th>Cond</th>
-              <th>Precip</th>
-              <th>Temp</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><b>Thu</b> (12 Nov)</td>
-              <td>☀️ Clear</td>
-              <td>0%</td>
-              <td>15° / 6°</td>
-            </tr>
-            <tr>
-              <td><b>Fri</b> (13 Nov)</td>
-              <td>⛅ Partly Cloudy</td>
-              <td>10%</td>
-              <td>13° / 5°</td>
-            </tr>
-            <tr>
-              <td><b>Sat</b> (14 Nov)</td>
-              <td>🌧️ Rain Showers</td>
-              <td>60% (3mm)</td>
-              <td>10° / 3°</td>
-            </tr>
-            <tr>
-              <td><b>Sun</b> (15 Nov)</td>
-              <td>🌤️ Mostly Clear</td>
-              <td>0%</td>
-              <td>12° / 4°</td>
-            </tr>
-            <tr>
-              <td><b>Mon</b> (16 Nov)</td>
-              <td>☀️ Clear</td>
-              <td>0%</td>
-              <td>14° / 5°</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- CALENDAR CARD -->
-      <div class="card">
-        <div class="card-title">November 2026</div>
-        <table class="cal-table">
-          <thead>
-            <tr>
-              <th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style="color:#aaa;">26</td><td style="color:#aaa;">27</td><td style="color:#aaa;">28</td><td style="color:#aaa;">29</td><td style="color:#aaa;">30</td><td style="color:#aaa;">31</td><td>1</td>
-            </tr>
-            <tr>
-              <td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td>
-            </tr>
-            <tr>
-              <td>9</td><td>10</td><td><span class="today-circle">11</span></td><td>12</td><td>13</td><td>14</td><td>15</td>
-            </tr>
-            <tr>
-              <td>16</td><td>17</td><td>18</td><td>19</td><td>20</td><td>21</td><td>22</td>
-            </tr>
-            <tr>
-              <td>23</td><td>24</td><td>25</td><td>26</td><td>27</td><td>28</td><td>29</td>
-            </tr>
-            <tr>
-              <td>30</td><td style="color:#aaa;">1</td><td style="color:#aaa;">2</td><td style="color:#aaa;">3</td><td style="color:#aaa;">4</td><td style="color:#aaa;">5</td><td style="color:#aaa;">6</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-    </div>
-
-    <!-- RIGHT COLUMN -->
-    <div class="cell w-50" style="padding-left: 10px;">
-      
-      <!-- TO-DO CARD -->
-      <div class="card">
-        <div class="card-title">To-Do Checklist</div>
-        <div class="todo-item"><span class="checkbox"></span> Review AELLCA project logistics report</div>
-        <div class="todo-item"><span class="checkbox"></span> Sync files via USB / KOReader Wi-Fi</div>
-        <div class="todo-item"><span class="checkbox"></span> Check winter construction updates</div>
-        <div class="todo-item"><span class="checkbox"></span> Prepare regional event briefing notes</div>
-        <div class="todo-item"><span class="checkbox"></span> Read Amazon Kindle e-book chapter</div>
-      </div>
-
-      <!-- NEWS CARD -->
-      <div class="card">
-        <div class="card-title">Top News — Tajikistan</div>
-        <div class="news-item">
-          <span class="news-tag">Asia-Plus</span>
-          <span class="news-title">Central Asian Educational & Cultural Forum Steps Up Regional Cooperation</span>
-          <div class="news-sum">Key stakeholders gather to discuss language learning initiatives and inter-regional partnerships.</div>
-        </div>
-        <div class="news-item">
-          <span class="news-tag">Khovar</span>
-          <span class="news-title">Sughd Region Prepares Agricultural & Trade Expositions for Late 2026</span>
-          <div class="news-sum">Regional enterprise leaders announce new logistics corridors and exhibition plans in Khujand.</div>
-        </div>
-        <div class="news-item">
-          <span class="news-tag">Asia-Plus</span>
-          <span class="news-title">Infrastructure and Clean Energy Projects Expand Across Northern Tajikistan</span>
-          <div class="news-sum">Updated municipal grid projects aim to boost reliability ahead of the upcoming winter season.</div>
-        </div>
-      </div>
-
-    </div>
+<!-- WEATHER 10-DAY MODAL -->
+<div id="wx-modal" class="modal" hidden>
+  <div class="mbox" onclick="event.stopPropagation()">
+    <h3 id="wx-pop-title">10-Day Forecast — Khujand</h3>
+    <div id="wx-pop-list"></div>
+    <div class="m" style="margin-top:3vmin;">Tap outside to close</div>
   </div>
 </div>
 
+<!-- SCROLLABLE CALENDAR MODAL -->
+<div id="cal-modal" class="modal" hidden>
+  <div class="mbox" onclick="event.stopPropagation()">
+    <div class="cal-nav">
+      <button id="cal-prev">‹ Previous</button>
+      <span id="cal-pop-title" style="font-weight:bold; font-size:1.2em;"></span>
+      <button id="cal-next">Next ›</button>
+    </div>
+    <div id="pop-cal-container"></div>
+    <div class="m" style="margin-top:3vmin;">Scroll vertically for more months • Tap outside to close</div>
+  </div>
+</div>
+
+<!-- EXPANDED TO-DO MODAL -->
+<div id="todo-modal" class="modal" hidden>
+  <div class="mbox" onclick="event.stopPropagation()">
+    <h3 style="font-size:clamp(20px,3.8vmin,30px); color:var(--accent); margin-bottom:2vmin;">To-Do List</h3>
+    <div class="add">
+      <input id="pop-in" type="text" placeholder="Add a task" maxlength="80" autocomplete="off">
+      <button id="pop-add" type="button">Add</button>
+    </div>
+    <ul id="pop-list" style="max-height:55vh;"></ul>
+    <div class="m" style="margin-top:3vmin;">Tap outside to close</div>
+  </div>
+</div>
+
+<script>
+/* ---------- Settings ---------- */
+var CONFIG = {
+  placeName: "Khujand",
+  latitude: 40.28,
+  longitude: 69.62,
+  units: "celsius",      
+  hour12: false,         
+  weekStartsOn: 1,       // 1 = Monday, 0 = Sunday
+  locale: "en-GB",
+  weatherRefreshMinutes: 30
+};
+
+var rawWeatherData = null;
+var activeCalDate = new Date();
+
+/* ---------- Weather Code to Emoji Icon Mapping ---------- */
+function getWeatherIcon(code) {
+  if (code === 0) return "☀️";
+  if (code === 1) return "🌤️";
+  if (code === 2) return "⛅";
+  if (code === 3) return "☁️";
+  if (code === 45 || code === 48) return "🌫️";
+  if (code >= 51 && code <= 57) return "🌧️";
+  if (code >= 61 && code <= 67) return "🌧️";
+  if (code >= 71 && code <= 77) return "❄️";
+  if (code >= 80 && code <= 82) return "🌦️";
+  if (code === 85 || code === 86) return "🌨️";
+  if (code >= 95) return "🌩️";
+  return "🌡️";
+}
+
+function describe(code) {
+  if (code === 0) return "Clear";
+  if (code === 1) return "Mostly clear";
+  if (code === 2) return "Partly cloudy";
+  if (code === 3) return "Overcast";
+  if (code === 45 || code === 48) return "Fog";
+  if (code >= 51 && code <= 57) return "Drizzle";
+  if (code >= 61 && code <= 67) return "Rain";
+  if (code >= 71 && code <= 77) return "Snow";
+  if (code >= 80 && code <= 82) return "Rain showers";
+  if (code === 85 || code === 86) return "Snow showers";
+  if (code >= 95) return "Thunderstorm";
+  return "";
+}
+
+/* ---------- Clock and date ---------- */
+var clockEl = document.getElementById("clock");
+var dateEl = document.getElementById("date");
+var lastTime = "", lastDay = "";
+
+function tick() {
+  var now = new Date();
+  var t = now.toLocaleTimeString(CONFIG.locale, {hour: "2-digit", minute: "2-digit", hour12: CONFIG.hour12});
+  if (t !== lastTime) { clockEl.textContent = t; lastTime = t; }
+  var d = now.toDateString();
+  if (d !== lastDay) {
+    lastDay = d;
+    dateEl.textContent = now.toLocaleDateString(CONFIG.locale, {weekday: "long", day: "numeric", month: "long"});
+  }
+}
+
+/* ---------- Calendar Grid Component ---------- */
+function buildGrid(gridEl, y, m) {
+  gridEl.textContent = "";
+  var today = new Date();
+  var i, cell;
+  for (i = 0; i < 7; i++) {
+    var wd = (CONFIG.weekStartsOn + i) % 7;
+    cell = document.createElement("div");
+    cell.className = "wd";
+    cell.textContent = new Date(2023, 0, 1 + wd).toLocaleDateString(CONFIG.locale, {weekday: "narrow"});
+    gridEl.appendChild(cell);
+  }
+  var offset = (new Date(y, m, 1).getDay() - CONFIG.weekStartsOn + 7) % 7;
+  var days = new Date(y, m + 1, 0).getDate();
+  for (i = 0; i < offset; i++) gridEl.appendChild(document.createElement("div"));
+  for (var d = 1; d <= days; d++) {
+    cell = document.createElement("div");
+    var dow = new Date(y, m, d).getDay();
+    var isToday = (d === today.getDate() && m === today.getMonth() && y === today.getFullYear());
+    cell.className = "c" + (isToday ? " today" : "") + (dow === 0 || dow === 6 ? " we" : "");
+    cell.textContent = d;
+    gridEl.appendChild(cell);
+  }
+}
+
+/* ---------- Calendar Modal triggered by Date ---------- */
+var calModal = document.getElementById("cal-modal");
+dateEl.onclick = function(e) {
+  e.stopPropagation();
+  activeCalDate = new Date();
+  renderPopCalendar();
+  calModal.hidden = false;
+};
+calModal.onclick = function() { calModal.hidden = true; };
+
+document.getElementById("cal-prev").onclick = function(e) {
+  e.stopPropagation();
+  activeCalDate.setMonth(activeCalDate.getMonth() - 1);
+  renderPopCalendar();
+};
+document.getElementById("cal-next").onclick = function(e) {
+  e.stopPropagation();
+  activeCalDate.setMonth(activeCalDate.getMonth() + 1);
+  renderPopCalendar();
+};
+
+function renderPopCalendar() {
+  var container = document.getElementById("pop-cal-container");
+  container.textContent = "";
+  var base = new Date(activeCalDate.getFullYear(), activeCalDate.getMonth(), 1);
+  
+  document.getElementById("cal-pop-title").textContent = 
+    base.toLocaleDateString(CONFIG.locale, {month: "long", year: "numeric"});
+
+  for (var i = 0; i < 3; i++) {
+    var target = new Date(base.getFullYear(), base.getMonth() + i, 1);
+    var block = document.createElement("div");
+    var title = document.createElement("h4");
+    title.style.margin = "1vmin 0";
+    title.style.color = "var(--accent)";
+    title.textContent = target.toLocaleDateString(CONFIG.locale, {month: "long", year: "numeric"});
+    var g = document.createElement("div");
+    g.className = "cal-grid";
+    buildGrid(g, target.getFullYear(), target.getMonth());
+    block.appendChild(title);
+    block.appendChild(g);
+    container.appendChild(block);
+  }
+}
+
+/* ---------- Weather (Open-Meteo with Icons) ---------- */
+function showWeatherError() {
+  var wx = document.getElementById("wx");
+  wx.textContent = "";
+  var e = document.createElement("div");
+  e.id = "wxerr";
+  e.textContent = "Weather unavailable. Check connection; retrying soon.";
+  wx.appendChild(e);
+}
+
+function loadWeather() {
+  var url = "https://api.open-meteo.com/v1/forecast?latitude=" + CONFIG.latitude +
+    "&longitude=" + CONFIG.longitude +
+    "&current=temperature_2m,weather_code" +
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max" +
+    "&temperature_unit=" + CONFIG.units + "&timezone=auto&forecast_days=10";
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", url);
+  xhr.timeout = 15000;
+  xhr.onload = function () {
+    try {
+      rawWeatherData = JSON.parse(xhr.responseText);
+      var j = rawWeatherData;
+      var wx = document.getElementById("wx");
+      wx.textContent = "";
+      var unit = CONFIG.units === "fahrenheit" ? "°F" : "°C";
+      
+      var tempRow = document.createElement("div");
+      tempRow.id = "temp-row";
+
+      var iconEl = document.createElement("div");
+      iconEl.id = "wx-icon";
+      iconEl.textContent = getWeatherIcon(j.current.weather_code);
+
+      var t = document.createElement("div");
+      t.id = "temp";
+      t.textContent = Math.round(j.current.temperature_2m) + unit;
+
+      tempRow.appendChild(iconEl);
+      tempRow.appendChild(t);
+
+      var c = document.createElement("div");
+      c.id = "cond";
+      c.textContent = describe(j.current.weather_code) + " in " + CONFIG.placeName;
+
+      var row = document.createElement("div");
+      row.id = "days";
+      for (var i = 1; i < Math.min(5, j.daily.time.length); i++) {
+        var p = j.daily.time[i].split("-");
+        var day = new Date(+p[0], +p[1] - 1, +p[2]);
+        var box = document.createElement("div");
+        box.className = "day";
+        var b = document.createElement("b");
+        b.textContent = day.toLocaleDateString(CONFIG.locale, {weekday: "short"});
+        var ico = document.createElement("span");
+        ico.className = "d-icon";
+        ico.textContent = getWeatherIcon(j.daily.weather_code[i]);
+        var hi = document.createElement("div");
+        hi.textContent = Math.round(j.daily.temperature_2m_max[i]) + "° ";
+        var lo = document.createElement("span");
+        lo.textContent = Math.round(j.daily.temperature_2m_min[i]) + "°";
+        hi.appendChild(lo);
+        box.appendChild(b);
+        box.appendChild(ico);
+        box.appendChild(hi);
+        row.appendChild(box);
+      }
+      wx.appendChild(tempRow); wx.appendChild(c); wx.appendChild(row);
+    } catch (err) { showWeatherError(); setTimeout(loadWeather, 5 * 60000); }
+  };
+  xhr.onerror = xhr.ontimeout = function () { showWeatherError(); setTimeout(loadWeather, 5 * 60000); };
+  xhr.send();
+}
+
+var wxModal = document.getElementById("wx-modal");
+document.getElementById("wx").onclick = function(e) {
+  e.stopPropagation();
+  if (!rawWeatherData) return;
+  var list = document.getElementById("wx-pop-list");
+  list.textContent = "";
+  var d = rawWeatherData.daily;
+  for (var i = 0; i < d.time.length; i++) {
+    var p = d.time[i].split("-");
+    var day = new Date(+p[0], +p[1] - 1, +p[2]);
+    var row = document.createElement("div");
+    row.className = "wx-row";
+    
+    var dateSpan = document.createElement("div");
+    dateSpan.className = "wx-pop-date";
+    dateSpan.textContent = (i === 0 ? "Today" : day.toLocaleDateString(CONFIG.locale, {weekday: "short", day: "numeric", month: "short"}));
+    
+    var iconSpan = document.createElement("div");
+    iconSpan.className = "wx-pop-icon";
+    iconSpan.textContent = getWeatherIcon(d.weather_code[i]);
+
+    var condSpan = document.createElement("div");
+    condSpan.className = "wx-pop-cond";
+    condSpan.textContent = describe(d.weather_code[i]);
+    
+    var precipSpan = document.createElement("div");
+    precipSpan.className = "wx-pop-precip";
+    var prob = d.precipitation_probability_max ? d.precipitation_probability_max[i] : 0;
+    var sum = d.precipitation_sum ? d.precipitation_sum[i] : 0;
+    precipSpan.textContent = prob > 0 ? (prob + "% (" + sum + "mm)") : "0%";
+
+    var tempSpan = document.createElement("div");
+    tempSpan.className = "wx-pop-temp";
+    tempSpan.textContent = Math.round(d.temperature_2m_max[i]) + "° / " + Math.round(d.temperature_2m_min[i]) + "°";
+
+    row.appendChild(dateSpan);
+    row.appendChild(iconSpan);
+    row.appendChild(condSpan);
+    row.appendChild(precipSpan);
+    row.appendChild(tempSpan);
+    list.appendChild(row);
+  }
+  wxModal.hidden = false;
+};
+wxModal.onclick = function() { wxModal.hidden = true; };
+
+/* ---------- To-Do List & Modal Logic ---------- */
+var todos = [];
+var listEl = document.getElementById("list");
+var inputEl = document.getElementById("in");
+var popListEl = document.getElementById("pop-list");
+var popInputEl = document.getElementById("pop-in");
+var todoModal = document.getElementById("todo-modal");
+
+document.getElementById("todo").onclick = function() {
+  todoModal.hidden = false;
+};
+todoModal.onclick = function() { todoModal.hidden = true; };
+
+function saveTodos() {
+  try { localStorage.setItem("dash-todos", JSON.stringify(todos)); } catch (e) {}
+}
+function loadTodos() {
+  try { todos = JSON.parse(localStorage.getItem("dash-todos")) || []; } catch (e) { todos = []; }
+}
+function renderTodos() {
+  [listEl, popListEl].forEach(function(target) {
+    if(!target) return;
+    target.textContent = "";
+    if (!todos.length) {
+      var e = document.createElement("div");
+      e.className = "empty";
+      e.textContent = "Nothing to do. Add a task above.";
+      target.appendChild(e);
+      return;
+    }
+    todos.forEach(function (item, idx) {
+      var li = document.createElement("li");
+      if (item.done) li.className = "done";
+      var t = document.createElement("span");
+      t.className = "t";
+      t.textContent = item.text;
+      t.onclick = function (ev) { ev.stopPropagation(); item.done = !item.done; saveTodos(); renderTodos(); };
+      var x = document.createElement("button");
+      x.className = "x";
+      x.type = "button";
+      x.setAttribute("aria-label", "Delete task");
+      x.textContent = "×";
+      x.onclick = function (ev) { ev.stopPropagation(); todos.splice(idx, 1); saveTodos(); renderTodos(); };
+      li.appendChild(t); li.appendChild(x);
+      target.appendChild(li);
+    });
+  });
+}
+function addTodo(v) {
+  var val = (v || "").replace(/^\s+|\s+$/g, "");
+  if (!val) return;
+  todos.push({text: val, done: false});
+  inputEl.value = "";
+  popInputEl.value = "";
+  saveTodos(); renderTodos();
+}
+
+document.getElementById("add").onclick = function(e) { e.stopPropagation(); addTodo(inputEl.value); };
+inputEl.onkeydown = function (e) { if (e.key === "Enter") addTodo(inputEl.value); };
+
+document.getElementById("pop-add").onclick = function(e) { e.stopPropagation(); addTodo(popInputEl.value); };
+popInputEl.onkeydown = function (e) { if (e.key === "Enter") addTodo(popInputEl.value); };
+
+/* ---------- News (Asia-Plus & Khovar) ---------- */
+var NEWS = {
+  refreshMinutes: 30,
+  rotateSeconds: 10,
+  detailSeconds: 60,
+  feeds: [
+    {label: "Asia-Plus", count: 4, url: "https://asiaplus.news/en/feed/"},
+    {label: "Asia-Plus", count: 4, url: "https://asiaplus.news/feed/"},
+    {label: "Khovar",    count: 4, url: "https://khovar.tj/eng/feed/"},
+    {label: "Khovar",    count: 4, url: "https://khovar.tj/rus/feed/"}
+  ]
+};
+var newsEl = document.getElementById("news");
+var newsBody = document.getElementById("newsbody");
+var newsPg = document.getElementById("pg");
+var detailEl = document.getElementById("detail");
+var newsItems = [], newsStart = 0, newsShown = 0, detailTimer = null;
+
+function cleanText(s) {
+  return String(s || "").replace(/<[^>]*>/g, " ")
+    .replace(/&#(\d+);/g, function (m, n) { return String.fromCharCode(+n); })
+    .replace(/&#x([0-9a-f]+);/gi, function (m, n) { return String.fromCharCode(parseInt(n, 16)); })
+    .replace(/&nbsp;/g, " ").replace(/&quot;/g, "\"").replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+}
+function ago(pub) {
+  var d = new Date(String(pub).replace(" ", "T") + "Z");
+  if (isNaN(d.getTime())) return "";
+  var mins = Math.round((Date.now() - d.getTime()) / 60000);
+  if (mins < 0) return "";
+  if (mins < 60) return mins + " min ago";
+  if (mins < 1440) return Math.round(mins / 60) + " h ago";
+  return Math.round(mins / 1440) + " d ago";
+}
+function summaryOf(it, title) {
+  var d = cleanText(it.description);
+  if (!d || d === title) d = cleanText(String(it.content || "").split("</p>")[0]);
+  if (d === title) d = "";
+  if (d.length > 420) { d = d.slice(0, 420); d = d.slice(0, d.lastIndexOf(" ")) + "…"; }
+  return d;
+}
+function newsEntry(feed, it) {
+  var title = cleanText(it.title);
+  return {label: feed.label, source: feed.label, title: title, summary: summaryOf(it, title),
+          when: ago(it.pubDate), key: it.link || title};
+}
+
+function showDetail(n) {
+  document.getElementById("dmeta").textContent = [n.label, n.when].filter(Boolean).join("  •  ");
+  document.getElementById("dtitle").textContent = n.title;
+  var s = document.getElementById("dsum");
+  s.textContent = n.summary;
+  s.style.display = n.summary ? "block" : "none";
+  detailEl.hidden = false;
+  clearTimeout(detailTimer);
+  detailTimer = setTimeout(closeDetail, NEWS.detailSeconds * 1000);
+}
+function closeDetail() { clearTimeout(detailTimer); detailEl.hidden = true; }
+detailEl.onclick = closeDetail;
+
+function buildNewsEl(n) {
+  var box = document.createElement("div");
+  box.className = "n";
+  var m = document.createElement("div");
+  m.className = "m";
+  var l = document.createElement("span");
+  l.className = "l";
+  l.textContent = n.label;
+  m.appendChild(l);
+  m.appendChild(document.createTextNode(n.when ? (" • " + n.when) : ""));
+  var h = document.createElement("div");
+  h.className = "h";
+  h.textContent = n.title;
+  box.appendChild(m);
+  box.appendChild(h);
+  box.onclick = function (e) { e.stopPropagation(); showDetail(n); };
+  return box;
+}
+function renderNews() {
+  newsBody.textContent = "";
+  if (!newsItems.length) return;
+  if (newsStart >= newsItems.length) newsStart = 0;
+  var shown = 0;
+  for (var i = newsStart; i < newsItems.length; i++) {
+    var el = buildNewsEl(newsItems[i]);
+    newsBody.appendChild(el);
+    if (shown > 0 && newsEl.scrollHeight > newsEl.clientHeight + 1) { newsBody.removeChild(el); break; }
+    shown++;
+  }
+  newsShown = shown;
+  newsPg.textContent = (newsStart + 1) + "–" + (newsStart + shown) + " of " + newsItems.length + "  ›";
+}
+function nextNews() {
+  if (!detailEl.hidden || newsItems.length <= newsShown) return;
+  newsStart += newsShown;
+  if (newsStart >= newsItems.length) newsStart = 0;
+  renderNews();
+}
+document.getElementById("newshead").onclick = function(e) { e.stopPropagation(); nextNews(); };
+
+function finishNews(map) {
+  var list = [], seen = {};
+  NEWS.feeds.forEach(function (f) {
+    var taken = 0;
+    (map[f.url] || []).forEach(function (it) {
+      if (taken >= f.count) return;
+      var n = newsEntry(f, it);
+      if (!n.title || seen[n.key]) return;
+      seen[n.key] = 1; list.push(n); taken++;
+    });
+  });
+  if (list.length) { newsItems = list; newsStart = 0; renderNews(); }
+  else if (!newsItems.length) {
+    newsBody.textContent = "";
+    var e = document.createElement("div");
+    e.className = "m";
+    e.textContent = "News unavailable. Check connection; retrying soon.";
+    newsBody.appendChild(e);
+  }
+  setTimeout(loadNews, (list.length ? NEWS.refreshMinutes : 5) * 60000);
+}
+function loadNews() {
+  var urls = [], map = {};
+  NEWS.feeds.forEach(function (f) { if (urls.indexOf(f.url) < 0) urls.push(f.url); });
+  var pending = urls.length;
+  urls.forEach(function (u) {
+    var finished = false;
+    function done(items) {
+      if (finished) return;
+      finished = true;
+      map[u] = items || [];
+      if (--pending === 0) finishNews(map);
+    }
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(u));
+    xhr.timeout = 20000;
+    xhr.onload = function () {
+      try { var j = JSON.parse(xhr.responseText); done(j.status === "ok" ? j.items : []); }
+      catch (e) { done([]); }
+    };
+    xhr.onerror = xhr.ontimeout = function () { done([]); };
+    xhr.send();
+  });
+}
+
+/* ---------- Fullscreen Wake Lock ---------- */
+function keepAwake() {
+  try { if (navigator.wakeLock) navigator.wakeLock.request("screen").catch(function () {}); } catch (e) {}
+}
+document.addEventListener("visibilitychange", function () { if (!document.hidden) keepAwake(); });
+clockEl.onclick = function (e) {
+  e.stopPropagation();
+  var el = document.documentElement;
+  var f = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (f) { try { f.call(el); } catch (e) {} }
+};
+
+/* ---------- Start ---------- */
+loadTodos(); renderTodos();
+tick(); setInterval(tick, 1000);
+loadWeather(); setInterval(loadWeather, CONFIG.weatherRefreshMinutes * 60000);
+loadNews(); setInterval(nextNews, NEWS.rotateSeconds * 1000);
+keepAwake();
+</script>
 </body>
 </html>
